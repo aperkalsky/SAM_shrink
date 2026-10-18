@@ -16,7 +16,7 @@ void WriteWav(char* filename, char* buffer, int bufferlength)
 {
     FILE *file = fopen(filename, "wb");
     if (file == NULL) return;
-    //RIFF header
+/*    //RIFF header
     fwrite("RIFF", 4, 1,file);
     unsigned int filesize=bufferlength + 12 + 16 + 8 - 8;
     fwrite(&filesize, 4, 1, file);
@@ -40,7 +40,7 @@ void WriteWav(char* filename, char* buffer, int bufferlength)
 
     //data chunk
     fwrite("data", 4, 1, file);
-    fwrite(&bufferlength, 4, 1, file);
+    fwrite(&bufferlength, 4, 1, file); */
     fwrite(buffer, bufferlength, 1, file);
 
     fclose(file);
