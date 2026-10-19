@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
+#include <ctype.h>
 #include "debug.h"
 #include "sam.h"
 #include "render.h"
+#include "reciter.h"
 #include "SamTabs.h"
 
 #if !defined(VOICE_TYPE_ELF) && !defined(VOICE_TYPE_LITTLE_ROBOT) && \
@@ -68,7 +69,7 @@ unsigned char mouth = MOUTH_VAL;
 unsigned char throat = THROAT_VAL;
 int singmode = 0;
 
-extern int debug;
+int debug = 0;
 
 unsigned char mem39;
 unsigned char mem44;
@@ -94,36 +95,22 @@ unsigned char phonemeLengthOutput[60]; //tab47416
 
 
 
-// contains the final soundbuffer
-int bufferpos=0;
-char *buffer = NULL;
-
-
-void SetInput(char *_input)
-{
-    int i, l;
-    l = (int)strlen(_input);
-    if (l > 254) l = 254;
-    for(i=0; i<l; i++)
-        input[i] = _input[i];
-    input[l] = 0;
-}
-
-void EnableSingmode() {singmode = 1;}
-char* GetBuffer(){return buffer;}
-int GetBufferLength(){return bufferpos;}
+static unsigned int outputPhonemeCursor;
+static int outputBatchActive;
+static int outputPreparationDone;
+static int outputPreparationError;
+static int outputStreamFlushed;
+static int sessionState;
 
 void Init();
 int Parser1();
 void Parser2();
-int SAMMain();
 void CopyStress();
 void SetPhonemeLength();
 void AdjustLengths();
 void Code41240();
 void Insert(unsigned char position, unsigned char mem60, unsigned char mem59, unsigned char mem58);
 void InsertBreath();
-void PrepareOutput();
 void SetMouthThroat(unsigned char mouth, unsigned char throat);
 
 // 168=pitches
@@ -139,10 +126,6 @@ void Init()
 {
     int i;
     SetMouthThroat( mouth, throat);
-
-    bufferpos = 0;
-    // TODO, check for free the memory, 10 seconds of output should be more than enough
-    buffer = malloc(22050*10);
 
     /*
     freq2data = &mem[45136];
@@ -171,6 +154,7 @@ void Init()
     {
         stress[i] = 0;
         phonemeLength[i] = 0;
+        phonemeindex[i] = 0;
     }
 
     for(i=0; i<60; i++)
@@ -185,7 +169,7 @@ void Init()
 
 
 //int Code39771()
-int SAMMain()
+static int PreparePhonemes(void)
 {
     Init();
     phonemeindex[255] = 32; //to prevent buffer overflow
@@ -218,55 +202,147 @@ int SAMMain()
         PrintPhonemes(phonemeindex, phonemeLength, stress);
     }
 
-    PrepareOutput();
-
     return 1;
 }
 
 
 //void Code48547()
-void PrepareOutput()
+static int PrepareNextOutputBatch(void)
 {
-    A = 0;
-    X = 0;
-    Y = 0;
+    unsigned int batchPosition = 0;
+    if (outputPreparationDone) return 0;
 
     //pos48551:
     while(1)
     {
-        A = phonemeindex[X];
+        A = phonemeindex[outputPhonemeCursor];
         if (A == 255)
         {
             A = 255;
-            phonemeIndexOutput[Y] = 255;
+            phonemeIndexOutput[batchPosition] = 255;
             Render();
-            return;
+            outputPreparationDone = 1;
+            outputBatchActive = 1;
+            return 1;
         }
         if (A == 254)
         {
-            X++;
-            int temp = X;
-            //mem[48546] = X;
-            phonemeIndexOutput[Y] = 255;
+            outputPhonemeCursor++;
+            phonemeIndexOutput[batchPosition] = 255;
             Render();
-            //X = mem[48546];
-            X=temp;
-            Y = 0;
-            continue;
+            outputBatchActive = 1;
+            return 1;
         }
 
         if (A == 0)
         {
-            X++;
+            outputPhonemeCursor++;
             continue;
         }
 
-        phonemeIndexOutput[Y] = A;
-        phonemeLengthOutput[Y] = phonemeLength[X];
-        stressOutput[Y] = stress[X];
-        X++;
-        Y++;
+        if (batchPosition >= 59)
+        {
+            outputPreparationError = 1;
+            return 0;
+        }
+        phonemeIndexOutput[batchPosition] = A;
+        phonemeLengthOutput[batchPosition] = phonemeLength[outputPhonemeCursor];
+        stressOutput[batchPosition] = stress[outputPhonemeCursor];
+        outputPhonemeCursor++;
+        batchPosition++;
     }
+}
+
+bool SAM_Begin(const char *text)
+{
+    size_t length;
+    size_t i;
+
+    SAM_Cancel();
+    if (text == NULL) return false;
+
+    length = strlen(text);
+    if (length > 253) return false;
+
+    for (i = 0; i < length; i++)
+        input[i] = (char)toupper((unsigned char)text[i]);
+    input[length] = '[';
+    input[length + 1] = '\0';
+    if (!TextToPhonemes((unsigned char *)input)) return false;
+
+    singmode = 0;
+    outputPhonemeCursor = 0;
+    outputBatchActive = 0;
+    outputPreparationDone = 0;
+    outputPreparationError = 0;
+    outputStreamFlushed = 0;
+    RenderResetStream();
+    if (!PreparePhonemes())
+    {
+        SAM_Cancel();
+        return false;
+    }
+
+    sessionState = 1;
+    return true;
+}
+
+SAM_Status SAM_GenerateChunk(uint8_t *pcm, size_t capacity, size_t *produced)
+{
+    if (produced == NULL || (capacity != 0 && pcm == NULL))
+        return SAM_STATUS_ERROR;
+    *produced = 0;
+    if (sessionState == 0) return SAM_STATUS_ERROR;
+    if (sessionState == 2) return SAM_STATUS_DONE;
+
+    while (*produced < capacity)
+    {
+        size_t copied = RenderReadSamples(pcm + *produced, capacity - *produced);
+        *produced += copied;
+        if (*produced == capacity) break;
+
+        if (outputBatchActive)
+        {
+            if (RenderNext()) continue;
+            outputBatchActive = 0;
+            continue;
+        }
+
+        if (outputPreparationDone)
+        {
+            if (!outputStreamFlushed)
+            {
+                RenderFlushFinalSamples();
+                outputStreamFlushed = 1;
+                continue;
+            }
+            sessionState = 2;
+            return SAM_STATUS_DONE;
+        }
+
+        if (!PrepareNextOutputBatch())
+        {
+            if (outputPreparationError)
+            {
+                sessionState = 0;
+                return SAM_STATUS_ERROR;
+            }
+            sessionState = 2;
+            return SAM_STATUS_DONE;
+        }
+    }
+
+    return SAM_STATUS_MORE;
+}
+
+void SAM_Cancel(void)
+{
+    sessionState = 0;
+    outputBatchActive = 0;
+    outputPreparationDone = 0;
+    outputPreparationError = 0;
+    outputStreamFlushed = 0;
+    RenderResetStream();
 }
 
 //void Code48431()

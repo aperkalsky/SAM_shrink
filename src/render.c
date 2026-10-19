@@ -4,56 +4,52 @@
 
 #include "render.h"
 #include "RenderTabs.h"
-
 #include "debug.h"
-extern int debug;
 
+extern int debug;
 unsigned char wait1 = 7;
 unsigned char wait2 = 6;
 
 extern unsigned char A, X, Y;
-extern unsigned char mem44;
-extern unsigned char mem47;
-extern unsigned char mem49;
-extern unsigned char mem39;
-extern unsigned char mem50;
-extern unsigned char mem51;
-extern unsigned char mem53;
-extern unsigned char mem56;
-
-extern unsigned char speed;
-extern unsigned char pitch;
+extern unsigned char mem44, mem47, mem49, mem39, mem50, mem51, mem53, mem56;
+extern unsigned char speed, pitch;
 extern int singmode;
+extern unsigned char phonemeIndexOutput[60];
+extern unsigned char stressOutput[60];
+extern unsigned char phonemeLengthOutput[60];
 
-
-extern unsigned char phonemeIndexOutput[60]; //tab47296
-extern unsigned char stressOutput[60]; //tab47365
-extern unsigned char phonemeLengthOutput[60]; //tab47416
-
-unsigned char pitches[256]; // tab43008
-
+unsigned char pitches[256];
 unsigned char frequency1[256];
 unsigned char frequency2[256];
 unsigned char frequency3[256];
-
 unsigned char amplitude1[256];
 unsigned char amplitude2[256];
 unsigned char amplitude3[256];
-
-unsigned char sampledConsonantFlag[256]; // tab44800
-
+unsigned char sampledConsonantFlag[256];
 
 void AddInflection(unsigned char mem48, unsigned char phase1);
 unsigned char trans(unsigned char mem39212, unsigned char mem39213);
 
+static unsigned char timeline[16];
+static size_t timelineReadPosition;
+static unsigned char pcmFifo[16];
+static unsigned char pcmFifoRead;
+static unsigned char pcmFifoWrite;
+static unsigned char pcmFifoCount;
+static int renderActive;
+static unsigned char renderPhase1, renderPhase2, renderPhase3;
+static unsigned char renderMem38, renderSpeedCounter, renderMem48;
+static int sampleActive;
+static int sampleCompletionPending;
+static int sampleKind;
+static int sampleContinuation;
+static int samplePendingSecond;
+static int sampleByteDone;
+static unsigned char sampleIndex, sampleByte, sampleBits, samplePhase;
+static unsigned char sampledConsonantPosition;
+static unsigned char sampleSavedY;
+int bufferpos;
 
-// contains the final soundbuffer
-extern int bufferpos;
-extern char *buffer;
-
-
-
-//timetable for more accurate c64 simulation
 int timetable[5][5] =
 {
     {162, 167, 167, 127, 128},
@@ -62,36 +58,164 @@ int timetable[5][5] =
     {200, 0, 0, 54, 55},
     {199, 0, 0, 54, 54}
 };
+static unsigned oldtimetableindex;
 
-static unsigned oldtimetableindex = 0;
+static void QueueSafeSamples(size_t endPosition)
+{
+    while (timelineReadPosition < endPosition && pcmFifoCount < sizeof(pcmFifo))
+    {
+        pcmFifo[pcmFifoWrite] = timeline[timelineReadPosition % sizeof(timeline)];
+        timeline[timelineReadPosition % sizeof(timeline)] = 0;
+        pcmFifoWrite = (unsigned char)((pcmFifoWrite + 1) % sizeof(pcmFifo));
+        pcmFifoCount++;
+        timelineReadPosition++;
+    }
+}
+
+void RenderFlushFinalSamples(void)
+{
+    QueueSafeSamples((size_t)bufferpos / 50);
+}
+
+void RenderResetStream(void)
+{
+    memset(timeline, 0, sizeof(timeline));
+    timelineReadPosition = 0;
+    pcmFifoRead = pcmFifoWrite = pcmFifoCount = 0;
+    bufferpos = 0;
+    oldtimetableindex = 0;
+    renderActive = sampleActive = sampleCompletionPending = 0;
+    sampledConsonantPosition = 0;
+}
+
+size_t RenderReadSamples(unsigned char *pcm, size_t capacity)
+{
+    size_t count = 0;
+    while (count < capacity && pcmFifoCount != 0)
+    {
+        pcm[count++] = pcmFifo[pcmFifoRead];
+        pcmFifoRead = (unsigned char)((pcmFifoRead + 1) % sizeof(pcmFifo));
+        pcmFifoCount--;
+    }
+    return count;
+}
+
 void Output8BitAry(int index, unsigned char ary[5])
 {
     int k;
+    size_t start;
     bufferpos += timetable[oldtimetableindex][index];
-    oldtimetableindex = index;
-    // write a little bit in advance
-    for(k=0; k<5; k++)
-        buffer[bufferpos/50 + k] = ary[k];
+    oldtimetableindex = (unsigned)index;
+    start = (size_t)bufferpos / 50;
+    QueueSafeSamples(start);
+    for (k = 0; k < 5; k++)
+        timeline[(start + (size_t)k) % sizeof(timeline)] = ary[k];
 }
-void Output8Bit(int index, unsigned char A)
+
+void Output8Bit(int index, unsigned char value)
 {
-    unsigned char ary[5] = {A,A,A,A,A};
+    unsigned char ary[5] = { value, value, value, value, value };
     Output8BitAry(index, ary);
 }
 
+// Initialize a sampled-phoneme iterator. It emits one timing event per call.
+static void StartRenderSample(int continuation)
+{
+    unsigned char selector = (unsigned char)(mem39 & 7);
+    sampleSavedY = Y;
+    mem49 = Y;
+    mem47 = (unsigned char)(selector - 1);
+    mem53 = tab48426[mem47];
+    sampleKind = ((mem39 & 248) == 0) ? 2 : 1;
+    sampleContinuation = continuation;
+    samplePendingSecond = sampleByteDone = 0;
+    sampleBits = 0;
+    if (sampleKind == 1)
+        sampleIndex = (unsigned char)((mem39 & 248) ^ 255);
+    else
+    {
+        samplePhase = (unsigned char)((pitches[mem49] >> 4) ^ 255);
+        sampleIndex = sampledConsonantPosition;
+    }
+    sampleActive = 1;
+}
 
+static void AdvanceRenderSampleByte(void)
+{
+    sampleBits = 0;
+    sampleIndex++;
+    if (sampleKind == 1)
+    {
+        if (sampleIndex == 0)
+        {
+            sampleActive = 0;
+            sampleCompletionPending = 1;
+            mem44 = 1;
+            Y = sampleSavedY;
+        }
+    }
+    else
+    {
+        samplePhase++;
+        if (samplePhase == 0)
+        {
+            sampleActive = 0;
+            sampleCompletionPending = 1;
+            sampledConsonantPosition = sampleIndex;
+            mem44 = 1;
+            Y = sampleSavedY;
+            A = 1;
+        }
+    }
+}
 
+static int NextRenderSample(int *index, unsigned char *value)
+{
+    unsigned char highBit;
+    unsigned char tableIndex;
+    if (!sampleActive) return 0;
+    if (samplePendingSecond)
+    {
+        samplePendingSecond = 0;
+        *index = 2;
+        *value = 5 * 16;
+        if (sampleByteDone) AdvanceRenderSampleByte();
+        return 1;
+    }
+    if (sampleBits == 0)
+    {
+        sampleByte = sampleTable[(unsigned int)mem47 * 256U + sampleIndex];
+        sampleBits = 8;
+    }
+    highBit = (unsigned char)(sampleByte & 128);
+    sampleByte = (unsigned char)(sampleByte << 1);
+    sampleBits--;
+    sampleByteDone = (sampleBits == 0);
+    if (sampleKind == 1)
+    {
+        if (highBit == 0)
+        {
+            tableIndex = (unsigned char)(mem53 & 15);
+            *index = 1;
+            *value = (unsigned char)(tableIndex * 16);
+            if (tableIndex == 0)
+            {
+                samplePendingSecond = 1;
+                return 1;
+            }
+        }
+        else { *index = 2; *value = 5 * 16; }
+        if (sampleByteDone) AdvanceRenderSampleByte();
+    }
+    else
+    {
+        *index = highBit != 0 ? 3 : 4;
+        *value = highBit != 0 ? (unsigned char)(26 * 16) : (unsigned char)(6 * 16);
+        if (sampleByteDone) AdvanceRenderSampleByte();
+    }
+    return 1;
+}
 
-
-
-
-
-//written by me because of different table positions.
-// mem[47] = ...
-// 168=pitches
-// 169=frequency1
-// 170=frequency2
-// 171=frequency3
 // 172=amplitude1
 // 173=amplitude2
 // 174=amplitude3
@@ -184,6 +308,7 @@ void Write(unsigned char p, unsigned char Y, unsigned char value)
 // For voices samples, samples are interleaved between voiced output.
 
 
+#if 0 // Superseded by the resumable sampled-phoneme iterator above.
 // Code48227()
 void RenderSample(unsigned char *mem66)
 {
@@ -336,6 +461,7 @@ pos48315:
     Y = mem49;
     return;
 }
+#endif
 
 
 
@@ -361,12 +487,12 @@ void Render()
     unsigned char phase1 = 0;  //mem43
     unsigned char phase2=0;
     unsigned char phase3=0;
-    unsigned char mem66=0;
     unsigned char mem38=0;
     unsigned char mem40=0;
     unsigned char speedcounter=0; //mem45
     unsigned char mem48=0;
     int i;
+    renderActive = 0;
     if (phonemeIndexOutput[0] == 255) return; //exit if no data
 
     A = 0;
@@ -793,153 +919,144 @@ if (debug)
 // reset at the beginning of each glottal pulse.
 
     //finally the loop for sound output
-    //pos48078:
-    while(1)
+    renderPhase1 = phase1;
+    renderPhase2 = phase2;
+    renderPhase3 = phase3;
+    renderMem38 = mem38;
+    renderMem48 = mem48;
+    renderSpeedCounter = speedcounter;
+    sampleActive = 0;
+    sampleCompletionPending = 0;
+    sampledConsonantPosition = 0;
+    renderActive = 1;
+    return;
+}
+
+int RenderNext(void)
+{
+    unsigned char flag;
+    unsigned char ary[5];
+    unsigned int p1, p2, p3;
+    int k;
+    int outputPending;
+    int sampleOutputIndex;
+    unsigned char sampleOutputValue;
+
+    if (!renderActive) return 0;
+
+    for (;;)
     {
-        // get the sampled information on the phoneme
-        A = sampledConsonantFlag[Y];
-        mem39 = A;
-
-        // unvoiced sampled phoneme?
-        A = A & 248;
-        if(A != 0)
+        outputPending = 0;
+        if (sampleCompletionPending)
         {
-            // render the sample for the phoneme
-            RenderSample(&mem66);
-
-            // skip ahead two in the phoneme buffer
-            Y += 2;
-            mem48 -= 2;
-        } else
-        {
-            // simulate the glottal pulse and formants
-            unsigned char ary[5];
-            unsigned int p1 = phase1 * 256; // Fixed point integers because we need to divide later on
-            unsigned int p2 = phase2 * 256;
-            unsigned int p3 = phase3 * 256;
-            int k;
-            for (k=0; k<5; k++) {
-                signed char sp1 = (signed char)sinus[0xff & (p1>>8)];
-                signed char sp2 = (signed char)sinus[0xff & (p2>>8)];
-                signed char rp3 = (signed char)rectangle[0xff & (p3>>8)];
-                signed int sin1 = sp1 * ((unsigned char)amplitude1[Y] & 0x0f);
-                signed int sin2 = sp2 * ((unsigned char)amplitude2[Y] & 0x0f);
-                signed int rect = rp3 * ((unsigned char)amplitude3[Y] & 0x0f);
-                signed int mux = sin1 + sin2 + rect;
-                mux /= 32;
-                mux += 128; // Go from signed to unsigned amplitude
-                ary[k] = mux;
-                p1 += frequency1[Y] * 256 / 4; // Compromise, this becomes a shift and works well
-                p2 += frequency2[Y] * 256 / 4;
-                p3 += frequency3[Y] * 256 / 4;
+            sampleCompletionPending = 0;
+            if (sampleContinuation == 1)
+            {
+                Y += 2;
+                renderMem48 -= 2;
+                if (renderMem48 == 0)
+                {
+                    renderActive = 0;
+                    return 0;
+                }
+                renderSpeedCounter = speed;
+                outputPending = 1;
+                goto update_glottal_pulse;
             }
-            // output the accumulated value
-            Output8BitAry(0, ary);
-            speedcounter--;
-            if (speedcounter != 0) goto pos48155;
-            Y++; //go to next amplitude
 
-            // decrement the frame count
-            mem48--;
-        }
-
-        // if the frame count is zero, exit the loop
-        if(mem48 == 0)  return;
-        speedcounter = speed;
-pos48155:
-
-        // decrement the remaining length of the glottal pulse
-        mem44--;
-
-        // finished with a glottal pulse?
-        if(mem44 == 0)
-        {
-pos48159:
-            // fetch the next glottal pulse length
             A = pitches[Y];
             mem44 = A;
-            A = A - (A>>2);
-            mem38 = A;
-
-            // reset the formant wave generators to keep them in
-            // sync with the glottal pulse
-            phase1 = 0;
-            phase2 = 0;
-            phase3 = 0;
+            renderMem38 = (unsigned char)(A - (A >> 2));
+            renderPhase1 = renderPhase2 = renderPhase3 = 0;
             continue;
         }
 
-        // decrement the count
-        mem38--;
-
-        // is the count non-zero and the sampled flag is zero?
-        if((mem38 != 0) || (mem39 == 0))
+        if (sampleActive)
         {
-            // reset the phase of the formants to match the pulse
-            phase1 += frequency1[Y];
-            phase2 += frequency2[Y];
-            phase3 += frequency3[Y];
-            continue;
-        }
-
-        // voiced sampled phonemes interleave the sample with the
-        // glottal pulse. The sample flag is non-zero, so render
-        // the sample for the phoneme.
-        RenderSample(&mem66);
-        goto pos48159;
-    } //while
-
-
-    // The following code is never reached. It's left over from when
-    // the voiced sample code was part of this loop, instead of part
-    // of RenderSample();
-
-    //pos48315:
-    int tempA;
-    phase1 = A ^ 255;
-    Y = mem66;
-    do
-    {
-        //pos48321:
-
-        mem56 = 8;
-        A = Read(mem47, Y);
-
-        //pos48327:
-        do
-        {
-            //48327: ASL A
-            //48328: BCC 48337
-            tempA = A;
-            A = A << 1;
-            if ((tempA & 128) != 0)
+            if (NextRenderSample(&sampleOutputIndex, &sampleOutputValue))
             {
-                X = 26;
-                // mem[54296] = X;
-                bufferpos += 150;
-                buffer[bufferpos/50] = (X & 15)*16;
-            } else
-            {
-                //mem[54296] = 6;
-                X=6;
-                bufferpos += 150;
-                buffer[bufferpos/50] = (X & 15)*16;
+                Output8Bit(sampleOutputIndex, sampleOutputValue);
+                return 1;
             }
 
-            for(X = wait2; X>0; X--); //wait
-            mem56--;
-        } while(mem56 != 0);
+            continue;
+        }
 
-        Y++;
-        phase1++;
+        flag = sampledConsonantFlag[Y];
+        mem39 = flag;
+        if ((flag & 248) != 0)
+        {
+            StartRenderSample(1);
+            if (NextRenderSample(&sampleOutputIndex, &sampleOutputValue))
+            {
+                Output8Bit(sampleOutputIndex, sampleOutputValue);
+                return 1;
+            }
+            continue;
+        }
 
-    } while (phase1 != 0);
-    //  if (phase1 != 0) goto pos48321;
-    A = 1;
-    mem44 = 1;
-    mem66 = Y;
-    Y = mem49;
-    return;
+        p1 = (unsigned int)renderPhase1 * 256U;
+        p2 = (unsigned int)renderPhase2 * 256U;
+        p3 = (unsigned int)renderPhase3 * 256U;
+        for (k = 0; k < 5; k++)
+        {
+            signed char sp1 = (signed char)sinus[0xff & (p1 >> 8)];
+            signed char sp2 = (signed char)sinus[0xff & (p2 >> 8)];
+            signed char rp3 = (signed char)rectangle[0xff & (p3 >> 8)];
+            signed int sin1 = sp1 * ((unsigned char)amplitude1[Y] & 0x0f);
+            signed int sin2 = sp2 * ((unsigned char)amplitude2[Y] & 0x0f);
+            signed int rect = rp3 * ((unsigned char)amplitude3[Y] & 0x0f);
+            signed int mux = sin1 + sin2 + rect;
+            mux /= 32;
+            mux += 128;
+            ary[k] = (unsigned char)mux;
+            p1 += frequency1[Y] * 64U;
+            p2 += frequency2[Y] * 64U;
+            p3 += frequency3[Y] * 64U;
+        }
+        Output8BitAry(0, ary);
+        outputPending = 1;
+
+        renderSpeedCounter--;
+        if (renderSpeedCounter == 0)
+        {
+            Y++;
+            renderMem48--;
+        }
+
+        if (renderMem48 == 0)
+        {
+            renderActive = 0;
+            return outputPending;
+        }
+        if (renderSpeedCounter == 0) renderSpeedCounter = speed;
+
+    update_glottal_pulse:
+        mem44--;
+        if (mem44 == 0)
+        {
+            A = pitches[Y];
+            mem44 = A;
+            renderMem38 = (unsigned char)(A - (A >> 2));
+            renderPhase1 = 0;
+            renderPhase2 = 0;
+            renderPhase3 = 0;
+            return outputPending;
+        }
+
+        renderMem38--;
+        if (renderMem38 != 0 || mem39 == 0)
+        {
+            renderPhase1 += frequency1[Y];
+            renderPhase2 += frequency2[Y];
+            renderPhase3 += frequency3[Y];
+            if (outputPending) return 1;
+            continue;
+        }
+
+        StartRenderSample(2);
+        if (outputPending) return 1;
+    }
 }
 
 

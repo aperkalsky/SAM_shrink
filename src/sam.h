@@ -1,14 +1,22 @@
 #ifndef SAM_H
 #define SAM_H
 
-void SetInput(char *_input);
-void EnableSingmode();
-void EnableDebug();
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-int SAMMain();
+typedef enum {
+	SAM_STATUS_MORE,
+	SAM_STATUS_DONE,
+	SAM_STATUS_ERROR
+} SAM_Status;
 
-char* GetBuffer();
-int GetBufferLength();
+/* Begin a synthesis session for a NUL-terminated text string (up to 253 bytes). */
+bool SAM_Begin(const char *text);
+/* Generate no more than capacity samples; produced may be less than capacity. */
+SAM_Status SAM_GenerateChunk(uint8_t *pcm, size_t capacity, size_t *produced);
+/* Abandon the current session and discard pending samples. */
+void SAM_Cancel(void);
 
 
 //char input[]={"/HAALAOAO MAYN NAAMAEAE IHSTT SAEBAASTTIHAAN \x9b\x9b\0"};

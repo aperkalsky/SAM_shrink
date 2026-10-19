@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="SAM_shrink.vcxproj" />
+  <Project Path="SAM_shrink.vcxproj" Id="254eebe2-8a7b-4097-bdf4-251f4521ceea" />
 </Solution>

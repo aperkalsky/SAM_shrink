@@ -1,11 +1,9 @@
-This is an attempt to shrink the SAM (speech synthesizer) code to fit embedded system with limited resources.
+SAM_shrink is a compact SAM speech synthesizer intended for systems with limited memory.
 
-Currently the code needs a large output buffer (hundreds of kB) to place there a PCM signal.
+Audio is generated incrementally. Call `SAM_Begin(text)`, then repeatedly call
+`SAM_GenerateChunk(pcm, capacity, &produced)` and consume the samples returned
+until it reports `SAM_STATUS_DONE`. Call `SAM_Cancel()` to abandon a session.
 
-I'll try to use a smaller buffer and generate the output in chunks
-
-------------------------------------------------------------------
-
-To produce the sample WAV output, do
-
-SAM_shrink -wav i_am_sam.wav I am Sam
+The desktop test program accepts text arguments and writes the generated audio
+to `sam_stream.wav` in the current directory. With no arguments, it synthesizes
+“I am Sam”. The WAV is 8-bit, mono PCM at 22050 Hz.
