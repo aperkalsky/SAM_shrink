@@ -6,12 +6,66 @@
 #include "render.h"
 #include "SamTabs.h"
 
+#if !defined(VOICE_TYPE_ELF) && !defined(VOICE_TYPE_LITTLE_ROBOT) && \
+    !defined(VOICE_TYPE_STUFFY_GUY) && !defined(VOICE_TYPE_LITTLE_OLD_LADY) && \
+    !defined(VOICE_TYPE_EXTRA_TERRESTRIAL) && !defined(VOICE_TYPE_SAM)
+#define VOICE_TYPE_SAM
+#endif
+
+#if (defined(VOICE_TYPE_ELF) + defined(VOICE_TYPE_LITTLE_ROBOT) + \
+     defined(VOICE_TYPE_STUFFY_GUY) + defined(VOICE_TYPE_LITTLE_OLD_LADY) + \
+     defined(VOICE_TYPE_EXTRA_TERRESTRIAL) + defined(VOICE_TYPE_SAM)) != 1
+#error Define exactly one VOICE_TYPE preset
+#endif
+
+#ifdef VOICE_TYPE_ELF
+#define SPEED_VAL 72
+#define PITCH_VAL 64
+#define THROAT_VAL 110
+#define MOUTH_VAL 160
+#endif
+
+#ifdef VOICE_TYPE_LITTLE_ROBOT
+#define SPEED_VAL 92
+#define PITCH_VAL 60
+#define THROAT_VAL 190
+#define MOUTH_VAL 190
+#endif
+
+#ifdef VOICE_TYPE_STUFFY_GUY
+#define SPEED_VAL 82
+#define PITCH_VAL 72
+#define THROAT_VAL 110
+#define MOUTH_VAL 105
+#endif
+
+#ifdef VOICE_TYPE_LITTLE_OLD_LADY
+#define SPEED_VAL 82
+#define PITCH_VAL 32
+#define THROAT_VAL 145
+#define MOUTH_VAL 145
+#endif
+
+#ifdef VOICE_TYPE_EXTRA_TERRESTRIAL
+#define SPEED_VAL 100
+#define PITCH_VAL 64
+#define THROAT_VAL 150
+#define MOUTH_VAL 200
+#endif
+
+#ifdef VOICE_TYPE_SAM
+#define SPEED_VAL 72
+#define PITCH_VAL 64
+#define THROAT_VAL 128
+#define MOUTH_VAL 128
+#endif
+
 char input[256]; //tab39445
 //standard sam sound
-unsigned char speed = 72;
-unsigned char pitch = 64;
-unsigned char mouth = 128;
-unsigned char throat = 128;
+unsigned char speed = SPEED_VAL;
+unsigned char pitch = PITCH_VAL;
+unsigned char mouth = MOUTH_VAL;
+unsigned char throat = THROAT_VAL;
 int singmode = 0;
 
 extern int debug;
@@ -55,10 +109,6 @@ void SetInput(char *_input)
     input[l] = 0;
 }
 
-void SetSpeed(unsigned char _speed) {speed = _speed;}
-void SetPitch(unsigned char _pitch) {pitch = _pitch;}
-void SetMouth(unsigned char _mouth) {mouth = _mouth;}
-void SetThroat(unsigned char _throat) {throat = _throat;}
 void EnableSingmode() {singmode = 1;}
 char* GetBuffer(){return buffer;}
 int GetBufferLength(){return bufferpos;}

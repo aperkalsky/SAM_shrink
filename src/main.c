@@ -51,10 +51,6 @@ void PrintUsage()
     printf("usage: sam [options] Word1 Word2 ....\n");
     printf("options\n");
     printf("    -phonetic         enters phonetic mode. (see below)\n");
-    printf("    -pitch number        set pitch value (default=64)\n");
-    printf("    -speed number        set speed value (default=72)\n");
-    printf("    -throat number        set throat value (default=128)\n");
-    printf("    -mouth number        set mouth value (default=128)\n");
     printf("    -wav filename        output to wav instead of libsdl\n");
     printf("    -sing            special treatment of pitch\n");
     printf("    -debug            print additional debug messages\n");
@@ -189,26 +185,6 @@ int main(int argc, char **argv)
             if (strcmp(&argv[i][1], "debug")==0)
             {
                 debug = 1;
-            } else
-            if (strcmp(&argv[i][1], "pitch")==0)
-            {
-                SetPitch(atoi(argv[i+1]));
-                i++;
-            } else
-            if (strcmp(&argv[i][1], "speed")==0)
-            {
-                SetSpeed(atoi(argv[i+1]));
-                i++;
-            } else
-            if (strcmp(&argv[i][1], "mouth")==0)
-            {
-                SetMouth(atoi(argv[i+1]));
-                i++;
-            } else
-            if (strcmp(&argv[i][1], "throat")==0)
-            {
-                SetThroat(atoi(argv[i+1]));
-                i++;
             } else
             {
                 PrintUsage();
