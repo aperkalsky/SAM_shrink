@@ -65,7 +65,7 @@ static void QueueSafeSamples(size_t endPosition)
     while (timelineReadPosition < endPosition && pcmFifoCount < sizeof(pcmFifo))
     {
         pcmFifo[pcmFifoWrite] = timeline[timelineReadPosition % sizeof(timeline)];
-        timeline[timelineReadPosition % sizeof(timeline)] = 0;
+        timeline[timelineReadPosition % sizeof(timeline)] = 128;
         pcmFifoWrite = (unsigned char)((pcmFifoWrite + 1) % sizeof(pcmFifo));
         pcmFifoCount++;
         timelineReadPosition++;
@@ -79,7 +79,7 @@ void RenderFlushFinalSamples(void)
 
 void RenderResetStream(void)
 {
-    memset(timeline, 0, sizeof(timeline));
+    memset(timeline, 128, sizeof(timeline));
     timelineReadPosition = 0;
     pcmFifoRead = pcmFifoWrite = pcmFifoCount = 0;
     bufferpos = 0;

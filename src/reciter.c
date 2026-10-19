@@ -136,7 +136,7 @@ pos36554:
     inputtemp[X] = ' ';
     mem56++;
     X = mem56;
-    if (X > 120) goto pos36654;
+    if (X > 250) goto pos36654;
     input[X] = A;
     goto pos36554;
 

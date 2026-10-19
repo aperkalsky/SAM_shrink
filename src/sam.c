@@ -101,6 +101,9 @@ static int outputPreparationDone;
 static int outputPreparationError;
 static int outputStreamFlushed;
 static int sessionState;
+static char sessionText[254];
+static size_t sessionTextLength;
+static size_t sessionTextPosition;
 
 void Init();
 int Parser1();
@@ -205,6 +208,44 @@ static int PreparePhonemes(void)
     return 1;
 }
 
+static int PrepareNextTextSegment(void)
+{
+    size_t start = sessionTextPosition;
+    size_t end;
+    size_t length;
+
+    while (start < sessionTextLength && sessionText[start] == ' ')
+        start++;
+    if (start >= sessionTextLength) return 0;
+
+    end = start + 96;
+    if (end >= sessionTextLength)
+        end = sessionTextLength;
+    else
+    {
+        size_t split = end;
+        while (split > start + 48 && sessionText[split] != ' ')
+            split--;
+        if (sessionText[split] == ' ')
+            end = split;
+    }
+
+    length = end - start;
+    for (size_t i = 0; i < length; i++)
+        input[i] = (char)toupper((unsigned char)sessionText[start + i]);
+    input[length] = '[';
+    input[length + 1] = '\0';
+    if (!TextToPhonemes((unsigned char *)input)) return -1;
+
+    sessionTextPosition = end;
+    outputPhonemeCursor = 0;
+    outputBatchActive = 0;
+    outputPreparationDone = 0;
+    outputPreparationError = 0;
+    if (!PreparePhonemes()) return -1;
+    return 1;
+}
+
 
 //void Code48547()
 static int PrepareNextOutputBatch(void)
@@ -256,7 +297,7 @@ static int PrepareNextOutputBatch(void)
 bool SAM_Begin(const char *text)
 {
     size_t length;
-    size_t i;
+    int firstSegment;
 
     SAM_Cancel();
     if (text == NULL) return false;
@@ -264,26 +305,22 @@ bool SAM_Begin(const char *text)
     length = strlen(text);
     if (length > 253) return false;
 
-    for (i = 0; i < length; i++)
-        input[i] = (char)toupper((unsigned char)text[i]);
-    input[length] = '[';
-    input[length + 1] = '\0';
-    if (!TextToPhonemes((unsigned char *)input)) return false;
+    memcpy(sessionText, text, length + 1);
+    sessionTextLength = length;
+    sessionTextPosition = 0;
 
     singmode = 0;
-    outputPhonemeCursor = 0;
-    outputBatchActive = 0;
-    outputPreparationDone = 0;
-    outputPreparationError = 0;
     outputStreamFlushed = 0;
     RenderResetStream();
-    if (!PreparePhonemes())
+    sessionState = 1;
+    firstSegment = PrepareNextTextSegment();
+    if (firstSegment < 0)
     {
         SAM_Cancel();
         return false;
     }
-
-    sessionState = 1;
+    if (firstSegment == 0)
+        sessionState = 2;
     return true;
 }
 
@@ -310,6 +347,17 @@ SAM_Status SAM_GenerateChunk(uint8_t *pcm, size_t capacity, size_t *produced)
 
         if (outputPreparationDone)
         {
+            if (sessionTextPosition < sessionTextLength)
+            {
+                int nextSegment = PrepareNextTextSegment();
+                if (nextSegment < 0)
+                {
+                    sessionState = 0;
+                    return SAM_STATUS_ERROR;
+                }
+                if (nextSegment > 0) continue;
+            }
+
             if (!outputStreamFlushed)
             {
                 RenderFlushFinalSamples();
@@ -342,6 +390,8 @@ void SAM_Cancel(void)
     outputPreparationDone = 0;
     outputPreparationError = 0;
     outputStreamFlushed = 0;
+    sessionTextLength = 0;
+    sessionTextPosition = 0;
     RenderResetStream();
 }
 
