@@ -7,6 +7,8 @@
 #include "reciter.h"
 #include "SamTabs.h"
 
+#define VOICE_TYPE_SAM
+
 #if !defined(VOICE_TYPE_ELF) && !defined(VOICE_TYPE_LITTLE_ROBOT) && \
     !defined(VOICE_TYPE_STUFFY_GUY) && !defined(VOICE_TYPE_LITTLE_OLD_LADY) && \
     !defined(VOICE_TYPE_EXTRA_TERRESTRIAL) && !defined(VOICE_TYPE_SAM)

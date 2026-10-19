@@ -105,6 +105,7 @@ int main(int argc, char **argv)
     {
         size_t produced = 0;
         status = SAM_GenerateChunk(pcm, sizeof(pcm), &produced);
+        printf("SAM_GenerateChunk() called. res = %d, produced = %zu\n", status, produced);
         if (produced != 0)
         {
             if (fwrite(pcm, 1, produced, wav) != produced)
