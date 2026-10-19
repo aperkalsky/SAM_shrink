@@ -2,7 +2,7 @@
 #include <string.h>
 #include "sam.h"
 
-#define TEST_OUTPUT_FILE "sam_stream.wav"
+#define DEFAULT_OUTPUT_FILE "sam_stream.wav"
 #define PCM_CHUNK_CAPACITY 512
 #define TEXT_CAPACITY 254
 
@@ -43,6 +43,7 @@ int main(int argc, char **argv)
     size_t textLength = 0;
     unsigned long totalSamples = 0;
     FILE *wav;
+    const char *outputFile = DEFAULT_OUTPUT_FILE;
     int arg;
     SAM_Status status;
 
@@ -55,6 +56,16 @@ int main(int argc, char **argv)
     {
         for (arg = 1; arg < argc; arg++)
         {
+            if (strcmp(argv[arg], "-wav") == 0)
+            {
+                if (arg + 1 >= argc)
+                {
+                    fprintf(stderr, "Missing filename after -wav.\n");
+                    return 1;
+                }
+                outputFile = argv[++arg];
+                continue;
+            }
             if (strcmp(argv[arg], "-debug") == 0)
             {
                 debug = 1;
@@ -81,7 +92,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    wav = fopen(TEST_OUTPUT_FILE, "wb+");
+    wav = fopen(outputFile, "wb+");
     if (wav == NULL)
     {
         perror("Unable to open WAV output");
@@ -122,6 +133,6 @@ int main(int argc, char **argv)
     }
     WriteWavHeader(wav, totalSamples);
     fclose(wav);
-    printf("Wrote %lu PCM samples to %s\n", totalSamples, TEST_OUTPUT_FILE);
+    printf("Wrote %lu PCM samples to %s\n", totalSamples, outputFile);
     return 0;
 }
