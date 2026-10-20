@@ -270,6 +270,13 @@ static int PrepareNextOutputBatch(void)
     }
 }
 
+/*
+ * Begin a synthesis session for a NUL-terminated text string.
+ * The input is copied internally and must not exceed 253 bytes, excluding
+ * the terminating NUL. Any existing session is cancelled first.
+ * Returns true when synthesis is ready to generate, or false for invalid
+ * input or a synthesis preparation error.
+ */
 bool SAM_Begin(const char *text)
 {
     size_t length;
@@ -300,6 +307,13 @@ bool SAM_Begin(const char *text)
     return true;
 }
 
+/*
+ * Generate up to capacity unsigned 8-bit PCM samples into pcm.
+ * The number of samples written is returned through produced. The function
+ * returns SAM_STATUS_MORE while samples remain, SAM_STATUS_DONE when the
+ * session is complete, or SAM_STATUS_ERROR when generation cannot continue.
+ * pcm may be NULL only when capacity is zero, and produced must not be NULL.
+ */
 SAM_Status SAM_GenerateChunk(uint8_t *pcm, size_t capacity, size_t *produced)
 {
     if (produced == NULL || (capacity != 0 && pcm == NULL))
@@ -359,6 +373,10 @@ SAM_Status SAM_GenerateChunk(uint8_t *pcm, size_t capacity, size_t *produced)
     return SAM_STATUS_MORE;
 }
 
+/*
+ * Cancel the current synthesis session and discard all pending audio.
+ * It is safe to call this when no session is active.
+ */
 void SAM_Cancel(void)
 {
     sessionState = 0;

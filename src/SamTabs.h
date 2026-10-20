@@ -1,13 +1,11 @@
 #ifndef SAMTABS_H
 #define SAMTABS_H
 
-//tab40672
 const unsigned char stressInputTable[] =
 {
     '*', '1', '2', '3', '4', '5', '6', '7', '8'
 };
 
-//tab40682
 const unsigned char signInputTable1[]={
     ' ', '.', '?', ',', '-', 'I', 'I', 'E',
     'A', 'A', 'A', 'A', 'U', 'A', 'I', 'E',
@@ -22,7 +20,6 @@ const unsigned char signInputTable1[]={
     'U'
 };
 
-//tab40763
 const unsigned char signInputTable2[] =
 {
     '*', '*', '*', '*', '*', 'Y', 'H', 'H',
@@ -38,7 +35,6 @@ const unsigned char signInputTable2[] =
     'N'
 };
 
-//loc_9F8C
 const unsigned char flags[]={
     0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0xA4 , 0xA4 , 0xA4 ,
     0xA4 , 0xA4 , 0xA4 , 0x84 , 0x84 , 0xA4 , 0xA4 , 0x84 ,
@@ -56,7 +52,6 @@ const unsigned char flags[]={
 };
 
 //??? flags overlap flags2
-//loc_9FDA
 const unsigned char flags2[] =
 {
     0x80 , 0xC1 , 0xC1 , 0xC1 , 0xC1 , 0x00 , 0x00 , 0x00 ,
@@ -71,9 +66,6 @@ const unsigned char flags2[] =
     0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00
 };
 
-
-
-//tab45616???
 const unsigned char phonemeStressedLengthTable[] =
 {
     0x00 , 0x12 , 0x12 , 0x12 , 8 ,0xB , 9 ,0xB ,
@@ -88,7 +80,6 @@ const unsigned char phonemeStressedLengthTable[] =
     7 , 2 , 4 , 7 , 1 , 4 , 5 , 5
 };
 
-//tab45536???
 const unsigned char phonemeLengthTable[] =
 {
     0 , 0x12 , 0x12 , 0x12 , 8 , 8 , 8 , 8 ,
@@ -102,8 +93,6 @@ const unsigned char phonemeLengthTable[] =
     1 , 2 , 8 , 2 , 2 , 4 , 2 , 2 ,
     6 , 1 , 4 , 6 , 1 , 4 , 0xC7 , 0xFF
 };
-
-
 
 /*
 

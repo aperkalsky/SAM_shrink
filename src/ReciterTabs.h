@@ -526,7 +526,6 @@ const unsigned char rules2[] =
 
 
 //26 items. From 'A' to 'Z'
-// positions for mem62 and mem63 for each character
 const unsigned char tab37489[] =
 {
 0, 149, 247, 162, 57, 197, 6, 126,

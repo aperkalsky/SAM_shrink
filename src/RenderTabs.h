@@ -17,7 +17,6 @@ const unsigned char amplitudeRescale[] =
 };
 
 // Used to decide which phoneme's blend lengths. The candidate with the lower score is selected.
-// tab45856
 const unsigned char blendRank[] =
 {
     0 , 0x1F , 0x1F , 0x1F , 0x1F , 2 , 2 , 2 ,
@@ -34,7 +33,6 @@ const unsigned char blendRank[] =
 
 
 // Number of frames at the end of a phoneme devoted to interpolating to next phoneme's final value
-//tab45696
 const unsigned char outBlendLength[] =
 {
     0 , 2 , 2 , 2 , 2 , 4 , 4 , 4 ,
@@ -51,7 +49,6 @@ const unsigned char outBlendLength[] =
 
 
 // Number of frames at beginning of a phoneme devoted to interpolating to phoneme's final value
-// tab45776
 const unsigned char inBlendLength[] =
 {
     0 , 2 , 2 , 2 , 2 , 4 , 4 , 4 ,
@@ -99,8 +96,6 @@ const unsigned char sampledConsonantFlags[] =
     0 , 0 , 0 , 0 , 0 , 0 , 0 , 0
 };
 
-
-//tab45056
 unsigned char freq1data[]=
 {
     0x00 ,0x13 ,0x13 ,0x13 ,0x13 , 0xA , 0xE ,0x12
@@ -115,7 +110,6 @@ unsigned char freq1data[]=
     ,    6 ,0xA ,0xA , 6 , 6 , 6 , 0x2C , 0x13
 };
 
-//tab451356
 unsigned char freq2data[]=
 {
     0x00 , 0x43 , 0x43 , 0x43 , 0x43 , 0x54 , 0x48 , 0x42 ,
@@ -130,7 +124,6 @@ unsigned char freq2data[]=
     0x6D , 0x56 , 0x6D , 0x54 , 0x54 , 0x54 , 0x7F , 0x7F
 };
 
-//tab45216
 unsigned char freq3data[]=
 {
     0x00 , 0x5B , 0x5B , 0x5B , 0x5B , 0x6E , 0x5D , 0x5B ,
@@ -187,13 +180,9 @@ const unsigned char ampl3data[] =
     0 , 7 , 0 , 0 , 5 , 0 , 0x13 , 0x10
 };
 
-
-
-//tab42240
 const signed char sinus[256] =
 {0,3,6,9,12,16,19,22,25,28,31,34,37,40,43,46,49,51,54,57,60,63,65,68,71,73,76,78,81,83,85,88,90,92,94,96,98,100,102,104,106,107,109,111,112,113,115,116,117,118,120,121,122,122,123,124,125,125,126,126,126,127,127,127,127,127,127,127,126,126,126,125,125,124,123,122,122,121,120,118,117,116,115,113,112,111,109,107,106,104,102,100,98,96,94,92,90,88,85,83,81,78,76,73,71,68,65,63,60,57,54,51,49,46,43,40,37,34,31,28,25,22,19,16,12,9,6,3,0,-3,-6,-9,-12,-16,-19,-22,-25,-28,-31,-34,-37,-40,-43,-46,-49,-51,-54,-57,-60,-63,-65,-68,-71,-73,-76,-78,-81,-83,-85,-88,-90,-92,-94,-96,-98,-100,-102,-104,-106,-107,-109,-111,-112,-113,-115,-116,-117,-118,-120,-121,-122,-122,-123,-124,-125,-125,-126,-126,-126,-127,-127,-127,-127,-127,-127,-127,-126,-126,-126,-125,-125,-124,-123,-122,-122,-121,-120,-118,-117,-116,-115,-113,-112,-111,-109,-107,-106,-104,-102,-100,-98,-96,-94,-92,-90,-88,-85,-83,-81,-78,-76,-73,-71,-68,-65,-63,-60,-57,-54,-51,-49,-46,-43,-40,-37,-34,-31,-28,-25,-22,-19,-16,-12,-9,-6,-3};
 
-//tab42496
 const unsigned char rectangle[] =
 {
     0x90 , 0x90 , 0x90 , 0x90 , 0x90 , 0x90 , 0x90 , 0x90 ,
@@ -436,7 +425,5 @@ const unsigned char sampleTable[0x500] =
     ,    6 , 0xE0 , 7 , 0xE0 ,0xF , 0xF8 , 6 , 0xC1
     ,  0xFE , 1 , 0xFC , 3 , 0xE0 ,0xF , 0 , 0xFC
 };
-
-
 
 #endif
