@@ -136,29 +136,6 @@ void Init()
     int i;
     SetMouthThroat( mouth, throat);
 
-    /*
-    freq2data = &mem[45136];
-    freq1data = &mem[45056];
-    freq3data = &mem[45216];
-    */
-    //pitches = &mem[43008];
-    /*
-    frequency1 = &mem[43264];
-    frequency2 = &mem[43520];
-    frequency3 = &mem[43776];
-    */
-    /*
-    amplitude1 = &mem[44032];
-    amplitude2 = &mem[44288];
-    amplitude3 = &mem[44544];
-    */
-    //phoneme = &mem[39904];
-    /*
-    ampl1data = &mem[45296];
-    ampl2data = &mem[45376];
-    ampl3data = &mem[45456];
-    */
-
     for(i=0; i<256; i++)
     {
         stress[i] = 0;
@@ -176,8 +153,6 @@ void Init()
 
 }
 
-
-//int Code39771()
 static int PreparePhonemes(void)
 {
     Init();
@@ -203,10 +178,8 @@ static int PreparePhonemes(void)
         X++;
     } while (X != 0);
 
-    //pos39848:
     InsertBreath();
 
-    //mem[40158] = 255;
 #ifdef SAM_DEBUG
         PrintPhonemes(phonemeindex, phonemeLength, stress);
 #endif
@@ -252,14 +225,11 @@ static int PrepareNextTextSegment(void)
     return 1;
 }
 
-
-//void Code48547()
 static int PrepareNextOutputBatch(void)
 {
     unsigned int batchPosition = 0;
     if (outputPreparationDone) return 0;
 
-    //pos48551:
     while(1)
     {
         A = phonemeindex[outputPhonemeCursor];
@@ -401,7 +371,6 @@ void SAM_Cancel(void)
     RenderResetStream();
 }
 
-//void Code48431()
 void InsertBreath()
 {
     unsigned char mem54;
@@ -413,7 +382,6 @@ void InsertBreath()
     unsigned char mem66 = 0;
     while(1)
     {
-        //pos48440:
         X = mem66;
         index = phonemeindex[X];
         if (index == 255) return;
@@ -465,7 +433,6 @@ void InsertBreath()
 // to the L that precedes it.
 
 
-//void Code41883()
 void CopyStress()
 {
     // loop thought all the phonemes to be output
@@ -508,7 +475,6 @@ void CopyStress()
 }
 
 
-//void Code41014()
 void Insert(unsigned char position/*var57*/, unsigned char mem60, unsigned char mem59, unsigned char mem58)
 {
     int i;
@@ -591,7 +557,6 @@ int Parser1()
         stress[i] = 0;
 
   // THIS CODE MATCHES THE PHONEME LETTERS TO THE TABLE
-    // pos41078:
     while(1)
     {
         // GET THE FIRST CHARACTER FROM THE PHONEME BUFFER
@@ -701,11 +666,7 @@ pos41134:
     } //while
 }
 
-
-
-
 //change phonemelength depedendent on stress
-//void Code41203()
 void SetPhonemeLength()
 {
     unsigned char A;
@@ -792,7 +753,6 @@ void Code41240()
 //       <UNSTRESSED VOWEL> D <PAUSE>  -> <UNSTRESSED VOWEL> DX <PAUSE>
 
 
-//void Code41397()
 void Parser2()
 {
     unsigned char pos = 0; //mem66;
@@ -1241,7 +1201,6 @@ pos41812:
 // If next phoneme is stressed, continue processing phonemes
 // FIXME: How does a pause get stressed?
             if (stress[X] != 0) {pos++; continue;}
-//pos41856:
 // Set phonemes to DX
 #ifdef SAM_DEBUG
         printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
@@ -1371,7 +1330,6 @@ printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], sig
 
     // Loop throught all phonemes
     loopIndex = 0;
-    //pos48697
 
     while(1)
     {
@@ -1507,8 +1465,6 @@ printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]],
 
 
         // WH, R*, L*, W*, Y*, M*, N*, NX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
-
-//pos48821:
 
         // RULE: <NASAL> <STOP CONSONANT>
         //       Set punctuation length to 6
@@ -1661,7 +1617,6 @@ printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], sig
          loopIndex++;
          continue;
     }
-//            goto pos48701;
 }
 
 // -------------------------------------------------------------------------

@@ -217,9 +217,6 @@ static int NextRenderSample(int *index, unsigned char *value)
     return 1;
 }
 
-// 172=amplitude1
-// 173=amplitude2
-// 174=amplitude3
 unsigned char Read(unsigned char p, unsigned char Y)
 {
     switch(p)
@@ -362,14 +359,12 @@ pos48280:
     // left shift to get the high bit
     tempA = A;
     A = A << 1;
-    //48281: BCC 48290
 
     // bit not set?
     if ((tempA & 128) == 0)
     {
         // convert the bit to value from table
         X = mem53;
-        //mem[54296] = X;
         // output the byte
         Output8Bit(1, (X&0x0f) * 16);
         // if X != 0, exit loop
@@ -379,7 +374,6 @@ pos48280:
     // output a 5 for the on bit
     Output8Bit(2, 5 * 16);
 
-    //48295: NOP
 pos48296:
 
     X = 0;
@@ -411,22 +405,16 @@ pos48315:
     Y = *mem66;
     do
     {
-        //pos48321:
 
         // shift through all 8 bits
         mem56 = 8;
-        //A = Read(mem47, Y);
 
         // fetch value from table
         A = sampleTable[mem47*256+Y];
 
         // loop 8 times
-        //pos48327:
         do
         {
-            //48327: ASL A
-            //48328: BCC 48337
-
             // left shift and check high bit
             tempA = A;
             A = A << 1;
@@ -481,8 +469,6 @@ pos48315:
 // 4. Render the each frame.
 
 
-
-//void Code47574()
 void Render()
 {
     unsigned char phase1 = 0;  //mem43
@@ -510,7 +496,6 @@ void Render()
 // The parameters are copied from the phoneme to the frame verbatim.
 
 
-// pos47587:
 do
 {
     // get the index
@@ -531,9 +516,6 @@ do
         //goto pos48376;
         AddInflection(mem48, phase1);
     }
-    /*
-    if (A == 2) goto pos48372;
-    */
 
     // question mark phoneme?
     if (A == 2)
@@ -542,7 +524,6 @@ do
         mem48 = 255;
         AddInflection(mem48, phase1);
     }
-    //  pos47615:
 
     // get the stress amount (more stress = higher pitch)
     phase1 = tab47492[stressOutput[Y] + 1];
@@ -567,9 +548,8 @@ do
     } while(phase2 != 0);
     mem44++;
 } while(mem44 != 0);
-// -------------------
-//pos47694:
 
+// -------------------
 // CREATE TRANSITIONS
 //
 // Linear transitions are now created to smoothly connect the
@@ -745,7 +725,6 @@ do
         mem49 = A; // mem49 now holds length + position
         A = A + phase2; //Maybe Problem because of carry flag
 
-        //47776: ADC 42
         speedcounter = A;
         mem47 = 168;
         phase3 = mem49 - phase1; // what is mem49
@@ -757,7 +736,6 @@ do
         if ((X & 128) == 0)
         do   //while No. 2
         {
-            //pos47810:
 
           // mem47 is used to index the tables:
           // 168  pitches[]
@@ -801,7 +779,6 @@ do
                 mem53 = A - Read(mem47, phase3);
             }
 
-            //Code47503(mem40);
             // ML : Code47503 is division with remainder, and mem50 gets the sign
 
             // calculate change per frame
@@ -819,8 +796,7 @@ do
             // linearly interpolate values
 
             mem56 = 0;
-            //47907: CLC
-            //pos47908:
+
             while(1)     //while No. 3
             {
                 A = Read(mem47, Y) + mem53; //carry alway cleared
@@ -837,26 +813,19 @@ do
                     //if ((mem56 & 128)==0)
                     if ((mem50 & 128)==0)
                     {
-                        //47935: BIT 50
-                        //47937: BMI 47943
                         if(mem48 != 0) mem48++;
                     } else mem48--;
                 }
-                //pos47945:
                 Write(mem47, Y, mem48);
             } //while No. 3
 
-            //pos47952:
             mem47++;
             //if (mem47 != 175) goto pos47810;
         } while (mem47 != 175);     //while No. 2
-        //pos47963:
+
         mem44++;
         X = mem44;
     }  //while No. 1
-
-    //goto pos47701;
-    //pos47970:
 
     // add the length of this phoneme
     mem48 = mem49 + phonemeLengthOutput[mem44];
@@ -1068,10 +1037,6 @@ int RenderNext(void)
 
 void AddInflection(unsigned char mem48, unsigned char phase1)
 {
-    //pos48372:
-    //  mem48 = 255;
-//pos48376:
-
     // store the location of the punctuation
     mem49 = X;
     A = X;
@@ -1089,9 +1054,6 @@ void AddInflection(unsigned char mem48, unsigned char phase1)
 
 
 pos48398:
-    //48398: CLC
-    //48399: ADC 48
-
     // add the inflection direction
     A += mem48;
     phase1 = A;
@@ -1119,8 +1081,6 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 {
     unsigned char initialFrequency;
     unsigned char newFrequency = 0;
-    //unsigned char mouth; //mem38880
-    //unsigned char throat; //mem38881
 
     // mouth formants (F1) 5..29
     unsigned char mouthFormants5_29[30] = {
@@ -1142,7 +1102,7 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
     unsigned char throatFormants48_53[6] = {72, 39, 31, 43, 30, 34};
 
     unsigned char pos = 5; //mem39216
-//pos38942:
+
     // recalculate formant frequencies 5..29 for the mouth (F1) and throat (F2)
     while(pos != 30)
     {
@@ -1158,7 +1118,6 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
         pos++;
     }
 
-//pos39059:
     // recalculate formant frequencies 48..53
     pos = 48;
     Y = 0;
@@ -1178,11 +1137,8 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
     }
 }
 
-
-//return = (mem39212*mem39213) >> 1
 unsigned char trans(unsigned char mem39212, unsigned char mem39213)
 {
-    //pos39008:
     unsigned char carry;
     int temp;
     unsigned char mem39214, mem39215;
@@ -1196,10 +1152,6 @@ unsigned char trans(unsigned char mem39212, unsigned char mem39213)
         mem39212 = mem39212 >> 1;
         if (carry != 0)
         {
-            /*
-                        39018: LSR 39212
-                        39021: BCC 39033
-                        */
             carry = 0;
             A = mem39215;
             temp = (int)A + (int)mem39213;
@@ -1210,7 +1162,6 @@ unsigned char trans(unsigned char mem39212, unsigned char mem39213)
         temp = mem39215 & 1;
         mem39215 = (mem39215 >> 1) | (carry?128:0);
         carry = temp;
-        //39033: ROR 39215
         X--;
     } while (X != 0);
     temp = mem39214 & 128;

@@ -6,9 +6,7 @@
 #include "debug.h"
 #endif
 
-
 unsigned char A, X, Y;
-
 static unsigned char inputtemp[256];   // secure copy of input tab36096
 
 void Code37055(unsigned char mem59)
@@ -45,8 +43,6 @@ unsigned char GetRuleByte(unsigned short mem62, unsigned char Y)
 
 int TextToPhonemes(unsigned char *input) // Code36484
 {
-    //unsigned char *tab39445 = &mem[39445];   //input and output
-    //unsigned char mem29;
     unsigned char mem56;      //output position for phonemes
     unsigned char mem57;
     unsigned char mem58;
@@ -68,7 +64,6 @@ int TextToPhonemes(unsigned char *input) // Code36484
     Y = 0;
     do
     {
-        //pos36499:
         A = input[Y] & 127;
         if ( A >= 112) A = A & 95;
         else if ( A >= 96) A = A & 79;
@@ -102,12 +97,9 @@ pos36554:
             X = mem56;
             A = 155;
             input[X] = 155;
-            //goto pos36542;
-            //          Code39771();    //Code39777();
             return 1;
         }
 
-        //pos36579:
         if (A != '.') break;
         X++;
         Y = inputtemp[X];
@@ -120,7 +112,6 @@ pos36554:
     } //while
 
 
-    //pos36607:
     A = mem64;
     Y = A;
     A = tab36376[A];
@@ -131,7 +122,6 @@ pos36554:
         goto pos36700;
     }
 
-    //pos36630:
     A = mem57;
     if(A != 0) goto pos36677;
     A = 32;
@@ -144,16 +134,11 @@ pos36554:
 
     // -----
 
-    //36653 is unknown. Contains position
-
 pos36654:
     input[X] = 155;
     A = mem61;
     mem36653 = A;
-    //  mem29 = A; // not used
-    //  Code36538(); das ist eigentlich
     return 1;
-    //Code39771();
     //go on if there is more input ???
     mem61 = mem36653;
     goto pos36550;
@@ -185,7 +170,6 @@ pos36700:
     } while ((A & 128) == 0);
     Y++;
 
-    //pos36720:
     // find '('
     while(1)
     {
@@ -195,7 +179,6 @@ pos36700:
     }
     mem66 = Y;
 
-    //pos36732:
     // find ')'
     do
     {
@@ -204,7 +187,6 @@ pos36700:
     } while(A != ')');
     mem65 = Y;
 
-    //pos36741:
     // find '='
     do
     {
@@ -220,7 +202,7 @@ pos36700:
     // compare the string within the bracket
     Y = mem66;
     Y++;
-    //pos36759:
+
     while(1)
     {
         mem57 = inputtemp[X];
@@ -234,7 +216,6 @@ pos36700:
 
 // the string in the bracket is correct
 
-//pos36787:
     A = mem61;
     mem59 = mem61;
 
@@ -256,7 +237,6 @@ pos36791:
         mem59 = X;
     }
 
-//pos36833:
     A = mem57;
     if (A == ' ') goto pos36895;
     if (A == '#') goto pos36910;
@@ -266,8 +246,6 @@ pos36791:
     if (A == '^') goto pos37004;
     if (A == '+') goto pos37019;
     if (A == ':') goto pos37040;
-    //  Code42041();    //Error
-    //36894: BRK
     return 0;
 
     // --------------
@@ -397,7 +375,6 @@ pos37157:
     X++;
     A = inputtemp[X];
     if (A == 71) goto pos37108;
-    //pos37177:
     goto pos36700;
 
     // -----------------------------------------
@@ -410,11 +387,8 @@ pos37180:
 pos37184:
     Y = mem65 + 1;
 
-    //37187: CPY 64
-    //  if(? != 0) goto pos37194;
     if(Y == mem64) goto pos37455;
     mem65 = Y;
-    //37196: LDA (62),y
     A = GetRuleByte(mem62, Y);
     mem57 = A;
     X = A;
@@ -436,9 +410,6 @@ pos37226:
     if (A == 43) goto pos37419;   // '+'
     if (A == 58) goto pos37440;   // ':'
     if (A == 37) goto pos37077;   // '%'
-    //pos37291:
-    //  Code42041(); //Error
-    //37294: BRK
     return 0;
 
     // --------------
@@ -533,7 +504,6 @@ pos37455:
 #endif
 
 pos37461:
-    //37461: LDA (62),y
     A = GetRuleByte(mem62, Y);
     mem57 = A;
     A = A & 127;
@@ -544,8 +514,6 @@ pos37461:
         input[X] = A;
     }
 
-    //37478: BIT 57
-    //37480: BPL 37485  //not negative flag
     if ((mem57 & 128) == 0) goto pos37485; //???
     goto pos36554;
 pos37485:
