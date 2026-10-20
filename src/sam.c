@@ -84,8 +84,6 @@ unsigned char mem56;
 
 unsigned char mem59=0;
 
-unsigned char A, X, Y;
-
 unsigned char stress[256]; //numbers from 0 to 8
 unsigned char phonemeLength[256]; //tab40160
 unsigned char phonemeindex[256];
