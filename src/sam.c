@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "debug.h"
 #include "sam.h"
 #include "render.h"
 #include "reciter.h"
 #include "SamTabs.h"
+#ifdef SAM_DEBUG
+#include "debug.h"
+#endif
 
 #define VOICE_TYPE_SAM
 
@@ -71,8 +73,6 @@ unsigned char mouth = MOUTH_VAL;
 unsigned char throat = THROAT_VAL;
 int singmode = 0;
 
-int debug = 0;
-
 unsigned char mem39;
 unsigned char mem44;
 unsigned char mem47;
@@ -89,6 +89,10 @@ unsigned char A, X, Y;
 unsigned char stress[256]; //numbers from 0 to 8
 unsigned char phonemeLength[256]; //tab40160
 unsigned char phonemeindex[256];
+
+#ifdef SAM_DEBUG
+static int debugX;
+#endif
 
 unsigned char phonemeIndexOutput[60]; //tab47296
 unsigned char stressOutput[60]; //tab47365
@@ -180,8 +184,9 @@ static int PreparePhonemes(void)
     phonemeindex[255] = 32; //to prevent buffer overflow
 
     if (!Parser1()) return 0;
-    if (debug)
+#ifdef SAM_DEBUG
         PrintPhonemes(phonemeindex, phonemeLength, stress);
+#endif
     Parser2();
     CopyStress();
     SetPhonemeLength();
@@ -202,10 +207,9 @@ static int PreparePhonemes(void)
     InsertBreath();
 
     //mem[40158] = 255;
-    if (debug)
-    {
+#ifdef SAM_DEBUG
         PrintPhonemes(phonemeindex, phonemeLength, stress);
-    }
+#endif
 
     return 1;
 }
@@ -791,7 +795,6 @@ void Code41240()
 //void Code41397()
 void Parser2()
 {
-    if (debug) printf("Parser2\n");
     unsigned char pos = 0; //mem66;
     unsigned char mem58 = 0;
 
@@ -805,7 +808,9 @@ void Parser2()
         A = phonemeindex[pos];
 
 // DEBUG: Print phoneme and index
-        if (debug && A != 255) printf("%d: %c%c\n", X, signInputTable1[A], signInputTable2[A]);
+#ifdef SAM_DEBUG
+        printf("%d: %c%c\n", X, signInputTable1[A], signInputTable2[A]);
+#endif
 
 // Is phoneme pause?
         if (A == 0)
@@ -841,8 +846,10 @@ void Parser2()
         //pos41443:
 // Insert at WX or YX following, copying the stress
 
-        if (debug) if (A==20) printf("RULE: insert WX following diphtong NOT ending in IY sound\n");
-        if (debug) if (A==21) printf("RULE: insert YX following diphtong ending in IY sound\n");
+#ifdef SAM_DEBUG
+        if (A == 20) printf("RULE: insert WX following diphtong NOT ending in IY sound\n");
+        if (A == 21) printf("RULE: insert YX following diphtong ending in IY sound\n");
+#endif
         Insert(pos+1, A, mem59, mem58);
         X = pos;
 // Jump to ???
@@ -862,7 +869,9 @@ pos41457:
         if (A != 78) goto pos41487;  // 'UL'
         A = 24;         // 'L'                 //change 'UL' to 'AX L'
 
-        if (debug) printf("RULE: UL -> AX L\n");
+#ifdef SAM_DEBUG
+        printf("RULE: UL -> AX L\n");
+#endif
 
 pos41466:
 // Get current phoneme stress
@@ -886,7 +895,9 @@ pos41487:
         if (A != 79) goto pos41495;   // 'UM'
         // Jump up to branch - replaces current phoneme with AX and continues
         A = 27; // 'M'  //change 'UM' to  'AX M'
-        if (debug) printf("RULE: UM -> AX M\n");
+#ifdef SAM_DEBUG
+        printf("RULE: UM -> AX M\n");
+#endif
         goto pos41466;
 pos41495:
 
@@ -900,7 +911,9 @@ pos41495:
 
         // Jump up to branch - replaces current phoneme with AX and continues
         A = 28;         // 'N' //change UN to 'AX N'
-        if (debug) printf("RULE: UN -> AX N\n");
+#ifdef SAM_DEBUG
+        printf("RULE: UN -> AX N\n");
+#endif
         goto pos41466;
 pos41503:
 
@@ -948,7 +961,9 @@ pos41503:
                         if (A != 0)
                         {
 // Insert a glottal stop and move forward
-                            if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
+#ifdef SAM_DEBUG
+                            printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
+#endif
                             // 31 = 'Q'
                             Insert(X, 31, mem59, 0);
                             pos++;
@@ -977,7 +992,9 @@ pos41503:
         if (A == 69)                    // 'T'
         {
 // Change T to CH
-            if (debug) printf("RULE: T R -> CH R\n");
+#ifdef SAM_DEBUG
+            printf("RULE: T R -> CH R\n");
+#endif
             phonemeindex[pos-1] = 42;
             goto pos41779;
         }
@@ -992,7 +1009,9 @@ pos41503:
         {
 // Change D to J
             phonemeindex[pos-1] = 44;
-            if (debug) printf("RULE: D R -> J R\n");
+#ifdef SAM_DEBUG
+            printf("RULE: D R -> J R\n");
+#endif
             goto pos41788;
         }
 
@@ -1003,7 +1022,9 @@ pos41503:
 
 // If vowel flag is set change R to RX
         A = flags[A] & 128;
-        if (debug) printf("RULE: R -> RX\n");
+#ifdef SAM_DEBUG
+        printf("RULE: R -> RX\n");
+#endif
         if (A != 0) phonemeindex[pos] = 18;  // 'RX'
 
 // continue to next phoneme
@@ -1022,7 +1043,9 @@ pos41611:
 // If prior phoneme does not have VOWEL flag set, move to next phoneme
             if ((flags[phonemeindex[pos-1]] & 128) == 0) {pos++; continue;}
 // Prior phoneme has VOWEL flag set, so change L to LX and move to next phoneme
-            if (debug) printf("RULE: <VOWEL> L -> <VOWEL> LX\n");
+#ifdef SAM_DEBUG
+            printf("RULE: <VOWEL> L -> <VOWEL> LX\n");
+#endif
             phonemeindex[X] = 19;     // 'LX'
             pos++;
             continue;
@@ -1041,7 +1064,9 @@ pos41611:
 // If prior phoneme is not G, move to next phoneme
             if (phonemeindex[pos-1] != 60) {pos++; continue;}
 // Replace S with Z and move on
-            if (debug) printf("RULE: G S -> G Z\n");
+#ifdef SAM_DEBUG
+            printf("RULE: G S -> G Z\n");
+#endif
             phonemeindex[pos] = 38;    // 'Z'
             pos++;
             continue;
@@ -1062,7 +1087,9 @@ pos41611:
             {
 // VOWELS AND DIPHTONGS ENDING WITH IY SOUND flag set?
                 A = flags[Y] & 32;
-                if (debug) if (A==0) printf("RULE: K <VOWEL OR DIPHTONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPHTONG NOT ENDING WITH IY>\n");
+#ifdef SAM_DEBUG
+                if (A == 0) printf("RULE: K <VOWEL OR DIPHTONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPHTONG NOT ENDING WITH IY>\n");
+#endif
 // Replace with KX
                 if (A == 0) phonemeindex[pos] = 75;  // 'KX'
             }
@@ -1089,7 +1116,9 @@ pos41611:
 // If diphtong ending with YX, move continue processing next phoneme
             if ((flags[index] & 32) != 0) {pos++; continue;}
 // replace G with GX and continue processing next phoneme
-            if (debug) printf("RULE: G <VOWEL OR DIPHTONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPHTONG NOT ENDING WITH IY>\n");
+#ifdef SAM_DEBUG
+            printf("RULE: G <VOWEL OR DIPHTONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPHTONG NOT ENDING WITH IY>\n");
+#endif
             phonemeindex[pos] = 63; // 'GX'
             pos++;
             continue;
@@ -1114,7 +1143,9 @@ pos41611:
             goto pos41812;
         }
         // Replace with softer version
-        if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
+        #ifdef SAM_DEBUG
+        printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
+        #endif
         phonemeindex[pos] = Y-12;
         pos++;
         continue;
@@ -1137,7 +1168,9 @@ pos41749:
             A = flags2[Y] & 4;
 // If not set, continue processing next phoneme
             if (A == 0) {pos++; continue;}
-            if (debug) printf("RULE: <ALVEOLAR> UW -> <ALVEOLAR> UX\n");
+#ifdef SAM_DEBUG
+            printf("RULE: <ALVEOLAR> UW -> <ALVEOLAR> UX\n");
+#endif
             phonemeindex[X] = 16;
             pos++;
             continue;
@@ -1151,7 +1184,9 @@ pos41779:
         if (A == 42)    // 'CH'
         {
             //        pos41783:
-            if (debug) printf("CH -> CH CH+1\n");
+#ifdef SAM_DEBUG
+            printf("CH -> CH CH+1\n");
+#endif
             Insert(X+1, A+1, mem59, stress[X]);
             pos++;
             continue;
@@ -1166,7 +1201,9 @@ pos41788:
 
         if (A == 44) // 'J'
         {
-            if (debug) printf("J -> J J+1\n");
+#ifdef SAM_DEBUG
+            printf("J -> J J+1\n");
+#endif
             Insert(X+1, A+1, mem59, stress[X]);
             pos++;
             continue;
@@ -1206,7 +1243,9 @@ pos41812:
             if (stress[X] != 0) {pos++; continue;}
 //pos41856:
 // Set phonemes to DX
-        if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+#ifdef SAM_DEBUG
+        printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+#endif
         phonemeindex[pos] = 30;       // 'DX'
         } else
         {
@@ -1216,7 +1255,9 @@ pos41812:
             else
 // Is next phoneme a vowel or ER?
                 A = flags[A] & 128;
-            if (debug) if (A != 0) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+#ifdef SAM_DEBUG
+        if (A != 0) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+#endif
             if (A != 0) phonemeindex[pos] = 30;  // 'DX'
         }
 
@@ -1224,7 +1265,6 @@ pos41812:
 
     } // while
 }
-
 
 // Applies various rules that adjust the lengths of phonemes
 //
@@ -1306,14 +1346,18 @@ pos48644:
 
                 // change phoneme length to (length * 1.5) + 1
                 A = (A >> 1) + A + 1;
-if (debug) printf("RULE: Lengthen <FRICATIVE> or <VOICED> between <VOWEL> and <PUNCTUATION> by 1.5\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("RULE: Lengthen <FRICATIVE> or <VOICED> between <VOWEL> and <PUNCTUATION> by 1.5\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#endif
 
                 phonemeLength[X] = A;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#endif
 
             }
             // keep moving forward
@@ -1367,15 +1411,19 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
                         // RULE: <VOWEL> RX | LX <CONSONANT>
 
 
-if (debug) printf("RULE: <VOWEL> <RX | LX> <CONSONANT> - decrease length by 1\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
+#ifdef SAM_DEBUG
+printf("RULE: <VOWEL> <RX | LX> <CONSONANT> - decrease length by 1\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
+#endif
 
                         // decrease length of vowel by 1 frame
                         phonemeLength[loopIndex]--;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
+#endif
 
                     }
                     // move ahead
@@ -1413,16 +1461,20 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[ph
                 // move back
                 X--;
 
-if (debug) printf("RULE: <VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("RULE: <VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
+#endif
 
                 // decrease length by 1/8th
                 mem56 = phonemeLength[X] >> 3;
                 phonemeLength[X] -= mem56;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#endif
 
                 // move ahead
                 loopIndex++;
@@ -1432,16 +1484,20 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
             // RULE: <VOWEL> <VOICED CONSONANT>
             // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
 
-if (debug) printf("RULE: <VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]],  phonemeLength[X-1]);
+#ifdef SAM_DEBUG
+printf("RULE: <VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]],  phonemeLength[X-1]);
+#endif
 
             // decrease length
             A = phonemeLength[X-1];
             phonemeLength[X-1] = (A >> 2) + A + 1;     // 5/4*A + 1
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#endif
 
             // move ahead
             loopIndex++;
@@ -1481,10 +1537,12 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
                // B*, D*, G*, GX, P*, T*, K*, KX
 
             {
-if (debug) printf("RULE: <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#ifdef SAM_DEBUG
+printf("RULE: <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#endif
 
                 // set stop consonant length to 6
                 phonemeLength[X] = 6;
@@ -1492,9 +1550,11 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
                 // set nasal length to 5
                 phonemeLength[X-1] = 5;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#endif
 
             }
             // move to next phoneme
@@ -1534,12 +1594,16 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
             }
 
             // RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
-if (debug) printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#ifdef SAM_DEBUG
+printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+#endif
 // X gets overwritten, so hold prior X value for debug statement
-int debugX = X;
+#ifdef SAM_DEBUG
+            debugX = X;
+#endif
             // shorten the prior phoneme length to (length/2 + 1)
             phonemeLength[X] = (phonemeLength[X] >> 1) + 1;
             X = loopIndex;
@@ -1547,9 +1611,11 @@ int debugX = X;
             // also shorten this phoneme length to (length/2 +1)
             phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
+printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
+#endif
 
 
             // move ahead
@@ -1575,15 +1641,19 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[pho
             if((flags[index] & 2) != 0) {
                              // Rule: <LIQUID CONSONANT> <DIPHTONG>
 
-if (debug) printf("RULE: <LIQUID CONSONANT> <DIPHTONG> - decrease by 2\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("RULE: <LIQUID CONSONANT> <DIPHTONG> - decrease by 2\n");
+printf("PRE\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#endif
 
              // decrease the phoneme length by 2 frames (20 ms)
              phonemeLength[X] -= 2;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#ifdef SAM_DEBUG
+printf("POST\n");
+printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+#endif
         }
          }
 

@@ -2,10 +2,12 @@
 #include <string.h>
 #include "reciter.h"
 #include "ReciterTabs.h"
+#ifdef SAM_DEBUG
 #include "debug.h"
+#endif
+
 
 unsigned char A, X, Y;
-extern int debug;
 
 static unsigned char inputtemp[256];   // secure copy of input tab36096
 
@@ -526,8 +528,9 @@ pos37455:
     Y = mem64;
     mem61 = mem60;
 
-    if (debug)
+#ifdef SAM_DEBUG
         PrintRule(mem62);
+#endif
 
 pos37461:
     //37461: LDA (62),y

@@ -6,7 +6,8 @@
 #define PCM_CHUNK_CAPACITY 512
 #define TEXT_CAPACITY 254
 
-extern int debug;
+// Uncomment the following line to enable debug output
+//#define SAM_DEBUG
 
 static void WriteLe16(FILE *file, unsigned int value)
 {
@@ -64,11 +65,6 @@ int main(int argc, char **argv)
                     return 1;
                 }
                 outputFile = argv[++arg];
-                continue;
-            }
-            if (strcmp(argv[arg], "-debug") == 0)
-            {
-                debug = 1;
                 continue;
             }
             size_t wordLength = strlen(argv[arg]);
